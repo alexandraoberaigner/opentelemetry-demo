@@ -13,6 +13,7 @@ import logging
 
 from openfeature import api
 from openfeature.contrib.provider.flagd import FlagdProvider
+from openfeature.contrib.hook.opentelemetry import TracingHook
 
 app = Flask(__name__)
 app.logger.setLevel(logging.INFO)
@@ -209,9 +210,15 @@ def check_feature_flag(flag_name: str):
     client = api.get_client()
     return client.get_boolean_value(flag_name, False)
 
+
+def get_product_summary_model() -> str:
+    client = api.get_client()
+    return client.get_string_value("productSummaryModel", "model-a")
+
 if __name__ == '__main__':
 
     api.set_provider(FlagdProvider(host=os.environ.get('FLAGD_HOST', 'flagd'), port=os.environ.get('FLAGD_PORT', 8013)))
+    api.add_hooks([TracingHook()])
     product_review_summaries = load_product_review_summaries(product_review_summaries_file_path)
     inaccurate_product_review_summaries = load_product_review_summaries(inaccurate_product_review_summaries_file_path)
 

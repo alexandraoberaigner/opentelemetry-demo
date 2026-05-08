@@ -146,6 +146,55 @@
         "10000x": 10000
       },
       "defaultVariant": "off"
+    },
+    "recommendationAlgorithm": {
+      "description": "Selects the algorithm used by the recommendation service. Demonstrates A/B testing tied to business outcomes via OpenFeature tracking.",
+      "state": "ENABLED",
+      "variants": {
+        "popularity": "popularity",
+        "collaborative": "collaborative",
+        "personalized": "personalized"
+      },
+      "defaultVariant": "popularity",
+      "targeting": {
+        "if": [
+          { "==": [{ "var": "userTier" }, "premium"] },
+          "personalized",
+          {
+            "fractional": [
+              { "var": "$flagd.flagKey" },
+              ["popularity", 50],
+              ["collaborative", 50]
+            ]
+          }
+        ]
+      }
+    },
+    "productCatalogCanary": {
+      "description": "Progressive rollout of a v2 product-catalog implementation. Demonstrates canary releases observable via OTel feature-flag SemConv attributes on spans.",
+      "state": "ENABLED",
+      "variants": {
+        "v1": "v1",
+        "v2": "v2"
+      },
+      "defaultVariant": "v1",
+      "targeting": {
+        "fractional": [
+          { "var": "$flagd.flagKey" },
+          ["v1", 95],
+          ["v2", 5]
+        ]
+      }
+    },
+    "productSummaryModel": {
+      "description": "Selects the model used to generate AI product summaries. Demonstrates multi-model experimentation (cost vs. quality) and kill-switch incident response.",
+      "state": "ENABLED",
+      "variants": {
+        "off": "off",
+        "model-a": "model-a",
+        "model-b": "model-b"
+      },
+      "defaultVariant": "model-a"
     }
   }
 }

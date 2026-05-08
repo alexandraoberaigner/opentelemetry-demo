@@ -44,6 +44,7 @@ class RecommendationService(demo_pb2_grpc.RecommendationServiceServicer):
         prod_list = get_product_list(request.product_ids)
         span = trace.get_current_span()
         span.set_attribute("app.products_recommended.count", len(prod_list))
+        span.set_attribute("app.recommendation.algorithm", get_recommendation_algorithm())
         logger.info(f"Receive ListRecommendations for product ids:{prod_list}")
 
         # build and return response
@@ -69,6 +70,8 @@ def get_product_list(request_product_ids):
     global cached_ids
     with tracer.start_as_current_span("get_product_list") as span:
         max_responses = 5
+        algorithm = get_recommendation_algorithm()
+        span.set_attribute("app.recommendation.algorithm", algorithm)
 
         # Formulate the list of characters to list of strings
         request_product_ids_str = ''.join(request_product_ids)
@@ -103,10 +106,21 @@ def get_product_list(request_product_ids):
         span.set_attribute("app.filtered_products.count", num_products)
         num_return = min(max_responses, num_products)
 
-        # Sample list of indicies to return
-        indices = random.sample(range(num_products), num_return)
-        # Fetch product ids from indices
-        prod_list = [filtered_products[i] for i in indices]
+        # Selection strategy driven by the recommendationAlgorithm flag.
+        # The OpenFeature OTel TracingHook attaches feature_flag.* SemConv
+        # attributes to the active span automatically — no extra code needed.
+        if algorithm == "popularity":
+            prod_list = filtered_products[:num_return]
+        elif algorithm == "collaborative":
+            sorted_products = sorted(filtered_products)
+            prod_list = sorted_products[:num_return]
+        elif algorithm == "personalized":
+            seed = sum(ord(c) for c in (request_product_ids_str or "anon"))
+            rng = random.Random(seed)
+            prod_list = rng.sample(filtered_products, num_return)
+        else:
+            indices = random.sample(range(num_products), num_return)
+            prod_list = [filtered_products[i] for i in indices]
 
         span.set_attribute("app.filtered_products.list", prod_list)
 
@@ -124,6 +138,11 @@ def check_feature_flag(flag_name: str):
     # Initialize OpenFeature
     client = api.get_client()
     return client.get_boolean_value("recommendationCacheFailure", False)
+
+
+def get_recommendation_algorithm() -> str:
+    client = api.get_client()
+    return client.get_string_value("recommendationAlgorithm", "popularity")
 
 
 if __name__ == "__main__":

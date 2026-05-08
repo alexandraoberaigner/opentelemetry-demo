@@ -7,6 +7,14 @@ the release.
 
 ## Unreleased
 
+* [flagd, recommendation, llm] Add three feature flags for the
+  OpenFeature + OpenTelemetry talk demo: `recommendationAlgorithm`
+  (string A/B test wired into recommendation service),
+  `productCatalogCanary` (string canary with fractional targeting), and
+  `productSummaryModel` (multi-model AI rollout). Adds the OpenFeature
+  OTel `TracingHook` to the LLM service so SemConv `feature_flag.*`
+  attributes attach to its spans. Scenario walkthrough in
+  `src/flagd/openfeature-talk-demo.md`.
 * [collector] Add `transform/sanitize_logs` processor to work around
   `otelcol.signal` scope attribute conflict with `otelcol.signal.output`
   that causes OpenSearch/Elasticsearch mapping failures
