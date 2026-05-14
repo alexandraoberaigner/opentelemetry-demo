@@ -373,6 +373,7 @@ func (cs *checkout) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (
 	logger.LogAttrs(
 		ctx,
 		slog.LevelInfo, "order placed",
+		slog.String("app.user.id", req.UserId),
 		slog.String("app.order.id", orderID.String()),
 		slog.Float64("app.shipping.amount", shippingCostFloat),
 		slog.Float64("app.order.amount", totalPriceFloat),
