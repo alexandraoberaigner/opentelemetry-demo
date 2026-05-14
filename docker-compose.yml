@@ -56,6 +56,7 @@ services:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-ad
       args:
         OTEL_JAVA_AGENT_VERSION: ${OTEL_JAVA_AGENT_VERSION}
+        AD_PORT: ${AD_PORT}
     deploy:
       resources:
         limits:
@@ -87,6 +88,8 @@ services:
     build:
       context: ./
       dockerfile: ${CART_DOCKERFILE}
+      args:
+        CART_PORT: ${CART_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-cart
     deploy:
@@ -122,6 +125,8 @@ services:
     build:
       context: ./
       dockerfile: ${CHECKOUT_DOCKERFILE}
+      args:
+        CHECKOUT_PORT: ${CHECKOUT_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-checkout
     deploy:
@@ -179,6 +184,7 @@ services:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-currency
       args:
         OPENTELEMETRY_CPP_VERSION: ${OPENTELEMETRY_CPP_VERSION}
+        CURRENCY_PORT: ${CURRENCY_PORT}
     deploy:
       resources:
         limits:
@@ -206,6 +212,8 @@ services:
     build:
       context: ./
       dockerfile: ${EMAIL_DOCKERFILE}
+      args:
+        EMAIL_PORT: ${EMAIL_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-email
     deploy:
@@ -269,6 +277,8 @@ services:
     build:
       context: ./
       dockerfile: ${FRONTEND_DOCKERFILE}
+      args:
+        FRONTEND_PORT: ${FRONTEND_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-frontend
     deploy:
@@ -331,6 +341,9 @@ services:
     build:
       context: ./
       dockerfile: ${FRONTEND_PROXY_DOCKERFILE}
+      args:
+        ENVOY_PORT: ${ENVOY_PORT}
+        ENVOY_ADMIN_PORT: ${ENVOY_ADMIN_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-frontend-proxy
     deploy:
@@ -388,6 +401,8 @@ services:
     build:
       context: ./
       dockerfile: ${IMAGE_PROVIDER_DOCKERFILE}
+      args:
+        IMAGE_PROVIDER_PORT: ${IMAGE_PROVIDER_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-image-provider
     deploy:
@@ -454,6 +469,8 @@ services:
     build:
       context: ./
       dockerfile: ${PAYMENT_DOCKERFILE}
+      args:
+        PAYMENT_PORT: ${PAYMENT_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-payment
     deploy:
@@ -486,6 +503,8 @@ services:
     build:
       context: ./
       dockerfile: ${PRODUCT_CATALOG_DOCKERFILE}
+      args:
+        PRODUCT_CATALOG_PORT: ${PRODUCT_CATALOG_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-product-catalog
     deploy:
@@ -525,6 +544,8 @@ services:
     build:
       context: ./
       dockerfile: ${PRODUCT_REVIEWS_DOCKERFILE}
+      args:
+        PRODUCT_REVIEWS_PORT: ${PRODUCT_REVIEWS_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-product-reviews
     deploy:
@@ -570,6 +591,8 @@ services:
     build:
       context: ./
       dockerfile: ${QUOTE_DOCKERFILE}
+      args:
+        QUOTE_PORT: ${QUOTE_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-quote
     deploy:
@@ -600,6 +623,8 @@ services:
     build:
       context: ./
       dockerfile: ${RECOMMENDATION_DOCKERFILE}
+      args:
+        RECOMMENDATION_PORT: ${RECOMMENDATION_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-recommendation
     deploy:
@@ -636,6 +661,8 @@ services:
     build:
       context: ./
       dockerfile: ${SHIPPING_DOCKERFILE}
+      args:
+        SHIPPING_PORT: ${SHIPPING_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-shipping
     deploy:
@@ -696,6 +723,8 @@ services:
     build:
       context: ./
       dockerfile: ${FLAGD_UI_DOCKERFILE}
+      args:
+        FLAGD_UI_PORT: ${FLAGD_UI_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-flagd-ui
     deploy:
@@ -762,6 +791,8 @@ services:
     build:
       context: ./
       dockerfile: ${LLM_DOCKERFILE}
+      args:
+        LLM_PORT: ${LLM_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-llm
     deploy:
@@ -930,6 +961,8 @@ services:
     build:
       context: ./
       dockerfile: ${TELEMETRY_DOCS_DOCKERFILE}
+      args:
+        TELEMETRY_DOCS_PORT: ${TELEMETRY_DOCS_PORT}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-telemetry-docs
     deploy:
