@@ -5,11 +5,14 @@
 
 
 # Python
+import hashlib
 import os
 import random
+import time
 from concurrent import futures
 
 # Pip
+
 import grpc
 from opentelemetry import trace, metrics
 from opentelemetry._logs import set_logger_provider
@@ -21,6 +24,7 @@ from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
 
 from openfeature import api
+from openfeature.evaluation_context import EvaluationContext
 from openfeature.contrib.provider.flagd import FlagdProvider
 
 from openfeature.contrib.hook.opentelemetry import TracingHook
@@ -41,11 +45,24 @@ first_run = True
 
 class RecommendationService(demo_pb2_grpc.RecommendationServiceServicer):
     def ListRecommendations(self, request, context):
-        prod_list = get_product_list(request.product_ids)
+        user_id = request.user_id or ""
+        user_tier = derive_user_tier(user_id)
+        algorithm = get_recommendation_algorithm(user_id)
+        prod_list = get_product_list(request.product_ids, user_id)
+
         span = trace.get_current_span()
         span.set_attribute("app.products_recommended.count", len(prod_list))
-        span.set_attribute("app.recommendation.algorithm", get_recommendation_algorithm())
-        logger.info(f"Receive ListRecommendations for product ids:{prod_list}")
+        span.set_attribute("app.recommendation.algorithm", algorithm)
+        span.set_attribute("app.user.tier", user_tier)
+        span.set_attribute("app.user.id", user_id)
+        logger.info(
+            "recommendation served",
+            extra={
+                "app.user.id": user_id,
+                "app.recommendation.algorithm": algorithm,
+                "app.user.tier": user_tier,
+            },
+        )
 
         # build and return response
         response = demo_pb2.ListRecommendationsResponse()
@@ -53,6 +70,10 @@ class RecommendationService(demo_pb2_grpc.RecommendationServiceServicer):
 
         # Collect metrics for this service
         rec_svc_metrics["app_recommendations_counter"].add(len(prod_list), {'recommendation.type': 'catalog'})
+        rec_svc_metrics["app_recommendations_algorithm_counter"].add(
+            len(prod_list),
+            {'recommendation.algorithm': algorithm, 'user.tier': user_tier},
+        )
 
         return response
 
@@ -65,12 +86,12 @@ class RecommendationService(demo_pb2_grpc.RecommendationServiceServicer):
             status=health_pb2.HealthCheckResponse.UNIMPLEMENTED)
 
 
-def get_product_list(request_product_ids):
+def get_product_list(request_product_ids, user_id=""):
     global first_run
     global cached_ids
     with tracer.start_as_current_span("get_product_list") as span:
         max_responses = 5
-        algorithm = get_recommendation_algorithm()
+        algorithm = get_recommendation_algorithm(user_id)
         span.set_attribute("app.recommendation.algorithm", algorithm)
 
         # Formulate the list of characters to list of strings
@@ -118,6 +139,8 @@ def get_product_list(request_product_ids):
             seed = sum(ord(c) for c in (request_product_ids_str or "anon"))
             rng = random.Random(seed)
             prod_list = rng.sample(filtered_products, num_return)
+            # Simulate inference latency for the heavier personalized model
+            time.sleep(random.uniform(0.05, 0.12))
         else:
             indices = random.sample(range(num_products), num_return)
             prod_list = [filtered_products[i] for i in indices]
@@ -134,15 +157,31 @@ def must_map_env(key: str):
     return value
 
 
+def derive_user_tier(user_id: str) -> str:
+    """Deterministically derive a user tier from the user ID.
+
+    ~70% of user IDs are mapped to 'premium' (last byte % 10 < 7).
+    """
+    if not user_id:
+        return "standard"
+    digest = hashlib.sha256(user_id.encode()).digest()
+    return "premium" if digest[-1] % 10 < 7 else "standard"
+
+
 def check_feature_flag(flag_name: str):
     # Initialize OpenFeature
     client = api.get_client()
     return client.get_boolean_value("recommendationCacheFailure", False)
 
 
-def get_recommendation_algorithm() -> str:
+def get_recommendation_algorithm(user_id: str = "") -> str:
     client = api.get_client()
-    return client.get_string_value("recommendationAlgorithm", "popularity")
+    user_tier = derive_user_tier(user_id)
+    ctx = EvaluationContext(
+        targeting_key=user_id or None,
+        attributes={"userTier": user_tier},
+    )
+    return client.get_string_value("recommendationAlgorithm", "popularity", ctx)
 
 
 if __name__ == "__main__":

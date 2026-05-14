@@ -58,11 +58,31 @@ TracingHook — the SemConv `feature_flag.*` attributes.
 4. Edit targeting in `flagd-ui` (e.g. shift the fractional split to 80/20)
    and watch the variant distribution change live.
 
-**Still to wire (next steps):**
-- Frontend `client.track("checkout_completed", { value, currency })` calls
-  to feed business-impact dashboards. See
-  `src/frontend/providers/Cart.provider.tsx` and the checkout flow.
-- A Grafana panel comparing conversion / AOV per variant.
+**Wired:**
+- `userTier` evaluation context — derived deterministically from `user_id`
+  (~10% get `premium` → `personalized` variant). See
+  `recommendation_server.py:derive_user_tier()` and
+  `get_recommendation_algorithm()`.
+- `app.user.tier` and `app.user.id` span attributes on every recommendation
+  span.
+- Per-variant counter metric `app_recommendations_algorithm_counter` split
+  by `recommendation.algorithm` and `user.tier`.
+- Load generator sends `sessionId` in recommendation calls so synthetic
+  traffic exercises the targeting rules.
+- Frontend `client.track("add_to_cart", ...)` in
+  `src/frontend/pages/product/[productId]/index.tsx` and
+  `client.track("checkout_completed", ...)` in
+  `src/frontend/components/Cart/CartDetail.tsx`, powered by
+  `OTelTrackingProviderWrapper` (bridges OpenFeature `track()` → OTel log
+  events).
+- Browser `LoggerProvider` in `FrontendTracer.ts` exports tracking logs via
+  OTLP HTTP to the collector → OpenSearch.
+- Grafana dashboard: "Feature Flag — Recommendation A/B Test"
+  (`feature-flag-dashboard.json`) with per-variant distribution, latency,
+  error rate, recommendation throughput, and tracking event log panels.
+- Spanmetrics connector configured with `feature_flag.key` /
+  `feature_flag.variant` dimensions in
+  `src/otel-collector/otelcol-config.yml`.
 
 ---
 
@@ -153,5 +173,7 @@ engagement vs cost" and Dynatrace's "act immediately when issues arise."
 - [ ] Targeting edits in flagd-ui propagate within seconds.
 - [ ] Each flag has a "boring default" so the demo never starts in a
       broken state.
-- [ ] Tracking events (frontend) appear as span events / metrics — see
-      next-steps in scenarios 1 and 3.
+- [ ] Tracking events (`add_to_cart`, `checkout_completed`) appear as log
+      records in OpenSearch (query: `feature_flag.tracking.event_name:*`).
+- [ ] Grafana "Feature Flag — Recommendation A/B Test" dashboard shows
+      variant distribution, latency, and error rate panels with data.

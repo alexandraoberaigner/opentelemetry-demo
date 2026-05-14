@@ -21,7 +21,7 @@ receivers:
   docker_stats:
     endpoint: unix:///var/run/docker.sock
     # https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/44511
-    api_version: "1.44"
+    api_version: "1.42"
   kafkametrics:
     scrapers:
       - brokers
@@ -216,8 +216,23 @@ processors:
           # SANITIZE ALL SPAN NAMES TO PREVENT CARDINALITY EXPLOSION
           - set_semconv_span_name("1.37.0", "original_span_name")
 
+      # Promote feature-flag span event attributes to span attributes so
+      # the spanmetrics connector can use them as metric dimensions.
+      # The OpenFeature TracingHook emits a "feature_flag.evaluation" span
+      # event (correct per SemConv); this transform copies the key fields
+      # up to span-level attributes where spanmetrics can see them.
+      - context: spanevent
+        conditions:
+          - name == "feature_flag.evaluation"
+        statements:
+          - set(span.attributes["feature_flag.key"], attributes["feature_flag.key"])
+          - set(span.attributes["feature_flag.variant"], attributes["feature_flag.result.variant"]) where attributes["feature_flag.result.variant"] != nil
+
 connectors:
   spanmetrics:
+    dimensions:
+      - name: feature_flag.key
+      - name: feature_flag.variant
 
 service:
   pipelines:

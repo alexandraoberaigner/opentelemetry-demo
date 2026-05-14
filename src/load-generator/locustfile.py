@@ -84,6 +84,17 @@ def get_flagd_value(FlagName):
     client = api.get_client()
     return client.get_integer_value(FlagName, 0)
 
+
+def get_recommendation_algorithm(user_id):
+    """Evaluate the recommendationAlgorithm flag for a synthetic user,
+    mirroring the same targeting logic used by the recommendation service."""
+    import hashlib
+    tier = "premium" if hashlib.sha256(user_id.encode()).digest()[-1] % 10 < 7 else "standard"
+    client = api.get_client()
+    from openfeature.evaluation_context import EvaluationContext
+    ctx = EvaluationContext(targeting_key=user_id, attributes={"userTier": tier})
+    return client.get_string_value("recommendationAlgorithm", "popularity", ctx)
+
 categories = [
     "binoculars",
     "telescopes",
@@ -130,13 +141,14 @@ class WebsiteUser(HttpUser):
             logging.info(f"User browsing product: {product}")
             self.client.get("/api/products/" + product)
 
-    @task(3)
+    @task(1)
     def get_recommendations(self):
         product = random.choice(products)
         with self.tracer.start_as_current_span("user_get_recommendations", context=Context(), attributes={"product.id": product}):
             logging.info(f"User getting recommendations for product: {product}")
             params = {
                 "productIds": [product],
+                "sessionId": self.session_id,
             }
             self.client.get("/api/recommendations", params=params)
 
@@ -192,28 +204,63 @@ class WebsiteUser(HttpUser):
             }
             self.client.post("/api/cart", json=cart_item)
 
-    @task(1)
+    @task(5)
     def checkout(self):
         user = str(uuid.uuid1())
         with self.tracer.start_as_current_span("user_checkout_single", context=Context(), attributes={"user.id": user}):
-            self.add_to_cart(user=user)
-            checkout_person = random.choice(people)
-            checkout_person["userId"] = user
-            self.client.post("/api/checkout", json=checkout_person)
-            logging.info(f"Checkout completed for user {user}")
+            # Browse and get recommendations first — this is the impression
+            # that the recommendation service records per variant.
+            product = random.choice(products)
+            self.client.get("/api/products/" + product)
+            self.client.get("/api/recommendations", params={
+                "productIds": [product],
+                "sessionId": user,
+            })
 
-    @task(1)
+            # Decide whether to convert based on the recommendation variant.
+            # This creates real variant-dependent checkout rates:
+            #   personalized → 85% convert  (the "lift")
+            #   collaborative → 55% convert
+            #   popularity → 40% convert    (baseline)
+            algorithm = get_recommendation_algorithm(user)
+            conversion_probs = {
+                "personalized": 0.85,
+                "collaborative": 0.55,
+                "popularity": 0.40,
+            }
+            converted = random.random() < conversion_probs.get(algorithm, 0.40)
+            if converted:
+                self.add_to_cart(user=user)
+                checkout_person = random.choice(people)
+                checkout_person["userId"] = user
+                self.client.post("/api/checkout", json=checkout_person)
+
+    @task(3)
     def checkout_multi(self):
         user = str(uuid.uuid1())
         item_count = random.choice([2, 3, 4])
         with self.tracer.start_as_current_span("user_checkout_multi", context=Context(),
                                             attributes={"user.id": user, "item.count": item_count}):
-            for i in range(item_count):
-                self.add_to_cart(user=user)
-            checkout_person = random.choice(people)
-            checkout_person["userId"] = user
-            self.client.post("/api/checkout", json=checkout_person)
-            logging.info(f"Multi-item checkout completed for user {user}")
+            product = random.choice(products)
+            self.client.get("/api/products/" + product)
+            self.client.get("/api/recommendations", params={
+                "productIds": [product],
+                "sessionId": user,
+            })
+
+            algorithm = get_recommendation_algorithm(user)
+            conversion_probs = {
+                "personalized": 0.85,
+                "collaborative": 0.55,
+                "popularity": 0.40,
+            }
+            converted = random.random() < conversion_probs.get(algorithm, 0.40)
+            if converted:
+                for i in range(item_count):
+                    self.add_to_cart(user=user)
+                checkout_person = random.choice(people)
+                checkout_person["userId"] = user
+                self.client.post("/api/checkout", json=checkout_person)
 
     @task(5)
     def flood_home(self):
@@ -226,9 +273,9 @@ class WebsiteUser(HttpUser):
 
     def on_start(self):
         with self.tracer.start_as_current_span("user_session_start", context=Context()):
-            session_id = str(uuid.uuid4())
-            logging.info(f"Starting user session: {session_id}")
-            ctx = baggage.set_baggage("session.id", session_id)
+            self.session_id = str(uuid.uuid4())
+            logging.info(f"Starting user session: {self.session_id}")
+            ctx = baggage.set_baggage("session.id", self.session_id)
             ctx = baggage.set_baggage("synthetic_request", "true", context=ctx)
             context.attach(ctx)
             self.index()
