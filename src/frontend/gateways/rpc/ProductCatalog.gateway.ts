@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { ChannelCredentials } from '@grpc/grpc-js';
+import { ChannelCredentials, Metadata } from '@grpc/grpc-js';
 import { ListProductsResponse, Product, ProductCatalogServiceClient } from '../../protos/demo';
 
 const { PRODUCT_CATALOG_ADDR = '' } = process.env;
@@ -14,9 +14,11 @@ const ProductCatalogGateway = () => ({
       client.listProducts({}, (error, response) => (error ? reject(error) : resolve(response)))
     );
   },
-  getProduct(id: string) {
+  getProduct(id: string, sessionId = '') {
+    const meta = new Metadata();
+    if (sessionId) meta.set('session-id', sessionId);
     return new Promise<Product>((resolve, reject) =>
-      client.getProduct({ id }, (error, response) => (error ? reject(error) : resolve(response)))
+      client.getProduct({ id }, meta, (error, response) => (error ? reject(error) : resolve(response)))
     );
   },
 });

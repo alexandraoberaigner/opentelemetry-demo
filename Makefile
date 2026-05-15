@@ -208,6 +208,25 @@ start-minimal:
 	@echo "Go to http://localhost:8080/loadgen/ for the Load Generator UI."
 	@echo "Go to https://opentelemetry.io/docs/demo/feature-flags/ to learn how to change feature flags."
 
+# ── Talk-specific load generator (k6) ──────────────────────────────────────
+# Requires k6: brew install k6
+LOADGEN_DIR = src/talk-loadgen
+
+.PHONY: loadgen-background
+loadgen-background:
+	@echo "Starting background traffic (Ctrl+C to stop)..."
+	k6 run -e SCENARIO=background $(LOADGEN_DIR)/loadgen.js
+
+.PHONY: loadgen-demo1
+loadgen-demo1:
+	@echo "Generating Demo 1 data (recommendation A/B test, Ctrl+C to stop)..."
+	k6 run -e SCENARIO=demo1 $(LOADGEN_DIR)/loadgen.js
+
+.PHONY: loadgen-demo2
+loadgen-demo2:
+	@echo "Generating Demo 2 data (product catalog canary, Ctrl+C to stop)..."
+	k6 run -e SCENARIO=demo2 $(LOADGEN_DIR)/loadgen.js
+
 .PHONY: stop
 stop:
 	$(DOCKER_COMPOSE_CMD) $(DOCKER_COMPOSE_ENV) down --remove-orphans --volumes

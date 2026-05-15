@@ -1,6 +1,83 @@
 {
   "$schema": "https://flagd.dev/schema/v0/flags.json",
   "flags": {
+    "adFailure": {
+      "defaultVariant": "off",
+      "description": "Fail ad service",
+      "state": "ENABLED",
+      "variants": {
+        "off": false,
+        "on": true
+      }
+    },
+    "adHighCpu": {
+      "defaultVariant": "off",
+      "description": "Triggers high cpu load in the ad service",
+      "state": "ENABLED",
+      "variants": {
+        "off": false,
+        "on": true
+      }
+    },
+    "adManualGc": {
+      "defaultVariant": "off",
+      "description": "Triggers full manual garbage collections in the ad service",
+      "state": "ENABLED",
+      "variants": {
+        "off": false,
+        "on": true
+      }
+    },
+    "cartFailure": {
+      "defaultVariant": "off",
+      "description": "Fail cart service",
+      "state": "ENABLED",
+      "variants": {
+        "off": false,
+        "on": true
+      }
+    },
+    "emailMemoryLeak": {
+      "defaultVariant": "off",
+      "description": "Memory leak in the email service.",
+      "state": "ENABLED",
+      "variants": {
+        "10000x": 10000,
+        "1000x": 1000,
+        "100x": 100,
+        "10x": 10,
+        "1x": 1,
+        "off": 0
+      }
+    },
+    "failedReadinessProbe": {
+      "defaultVariant": "off",
+      "description": "readiness probe failure for cart service",
+      "state": "ENABLED",
+      "variants": {
+        "off": false,
+        "on": true
+      }
+    },
+    "imageSlowLoad": {
+      "defaultVariant": "off",
+      "description": "slow loading images in the frontend",
+      "state": "ENABLED",
+      "variants": {
+        "10sec": 10000,
+        "5sec": 5000,
+        "off": 0
+      }
+    },
+    "kafkaQueueProblems": {
+      "defaultVariant": "off",
+      "description": "Overloads Kafka queue while simultaneously introducing a consumer side delay leading to a lag spike",
+      "state": "ENABLED",
+      "variants": {
+        "off": 0,
+        "on": 100
+      }
+    },
     "llmInaccurateResponse": {
       "defaultVariant": "off",
       "description": "LLM returns an inaccurate product summary for product ID L9ECAV7KIM",
@@ -19,182 +96,138 @@
         "on": true
       }
     },
-    "productCatalogFailure": {
-      "description": "Fail product catalog service on a specific product",
-      "state": "ENABLED",
-      "variants": {
-        "on": true,
-        "off": false
-      },
-      "defaultVariant": "off"
-    },
-    "recommendationCacheFailure": {
-      "description": "Fail recommendation service cache",
-      "state": "ENABLED",
-      "variants": {
-        "on": true,
-        "off": false
-      },
-      "defaultVariant": "off"
-    },
-    "adManualGc": {
-      "description": "Triggers full manual garbage collections in the ad service",
-      "state": "ENABLED",
-      "variants": {
-        "on": true,
-        "off": false
-      },
-      "defaultVariant": "off"
-    },
-    "adHighCpu": {
-      "description": "Triggers high cpu load in the ad service",
-      "state": "ENABLED",
-      "variants": {
-        "on": true,
-        "off": false
-      },
-      "defaultVariant": "off"
-    },
-    "adFailure": {
-      "description": "Fail ad service",
-      "state": "ENABLED",
-      "variants": {
-        "on": true,
-        "off": false
-      },
-      "defaultVariant": "off"
-    },
-    "kafkaQueueProblems": {
-      "description": "Overloads Kafka queue while simultaneously introducing a consumer side delay leading to a lag spike",
-      "state": "ENABLED",
-      "variants": {
-        "on": 100,
-        "off": 0
-      },
-      "defaultVariant": "off"
-    },
-    "cartFailure": {
-      "description": "Fail cart service",
-      "state": "ENABLED",
-      "variants": {
-        "on": true,
-        "off": false
-      },
-      "defaultVariant": "off"
-    },
-    "paymentFailure": {
-      "description": "Fail payment service charge requests n%",
-      "state": "ENABLED",
-      "variants": {
-        "100%": 1,
-        "90%": 0.95,
-        "75%": 0.75,
-        "50%": 0.5,
-        "25%": 0.25,
-        "10%": 0.1,
-        "off": 0
-      },
-      "defaultVariant": "off"
-    },
-    "paymentUnreachable": {
-      "description": "Payment service is unavailable",
-      "state": "ENABLED",
-      "variants": {
-        "on": true,
-        "off": false
-      },
-      "defaultVariant": "off"
-    },
     "loadGeneratorFloodHomepage": {
+      "defaultVariant": "off",
       "description": "Flood the frontend with a large amount of requests.",
       "state": "ENABLED",
       "variants": {
-        "on": 100,
-        "off": 0
-      },
-      "defaultVariant": "off"
-    },
-    "imageSlowLoad": {
-      "description": "slow loading images in the frontend",
-      "state": "ENABLED",
-      "variants": {
-        "10sec": 10000,
-        "5sec": 5000,
-        "off": 0
-      },
-      "defaultVariant": "off"
-    },
-    "failedReadinessProbe": {
-      "description": "readiness probe failure for cart service",
-      "state": "ENABLED",
-      "variants": {
-        "on": true,
-        "off": false
-      },
-      "defaultVariant": "off"
-
-    },
-    "emailMemoryLeak": {
-      "description": "Memory leak in the email service.",
-      "state": "ENABLED",
-      "variants": {
         "off": 0,
-        "1x": 1,
-        "10x": 10,
-        "100x": 100,
-        "1000x": 1000,
-        "10000x": 10000
-      },
-      "defaultVariant": "off"
+        "on": 100
+      }
     },
-    "recommendationAlgorithm": {
-      "description": "Selects the algorithm used by the recommendation service. Demonstrates A/B testing tied to business outcomes via OpenFeature tracking.",
+    "paymentFailure": {
+      "defaultVariant": "off",
+      "description": "Fail payment service charge requests n%",
       "state": "ENABLED",
       "variants": {
-        "popularity": "popularity",
-        "collaborative": "collaborative",
-        "personalized": "personalized"
-      },
-      "defaultVariant": "popularity",
-      "targeting": {
-        "if": [
-          { "==": [{ "var": "userTier" }, "premium"] },
-          "personalized",
-          {
-            "fractional": [
-              { "var": "$flagd.flagKey" },
-              ["popularity", 50],
-              ["collaborative", 50]
-            ]
-          }
-        ]
+        "10%": 0.1,
+        "100%": 1,
+        "25%": 0.25,
+        "50%": 0.5,
+        "75%": 0.75,
+        "90%": 0.95,
+        "off": 0
+      }
+    },
+    "paymentUnreachable": {
+      "defaultVariant": "off",
+      "description": "Payment service is unavailable",
+      "state": "ENABLED",
+      "variants": {
+        "off": false,
+        "on": true
       }
     },
     "productCatalogCanary": {
+      "defaultVariant": "v1",
       "description": "Progressive rollout of a v2 product-catalog implementation. Demonstrates canary releases observable via OTel feature-flag SemConv attributes on spans.",
       "state": "ENABLED",
+      "targeting": {
+        "fractional": [
+          {
+            "var": "$flagd.targetingKey"
+          },
+          [
+            "v1",
+            50
+          ],
+          [
+            "v2",
+            50
+          ]
+        ]
+      },
       "variants": {
         "v1": "v1",
         "v2": "v2"
-      },
-      "defaultVariant": "v1",
-      "targeting": {
-        "fractional": [
-          { "var": "$flagd.flagKey" },
-          ["v1", 95],
-          ["v2", 5]
-        ]
+      }
+    },
+    "productCatalogFailure": {
+      "defaultVariant": "off",
+      "description": "Fail product catalog service on a specific product",
+      "state": "ENABLED",
+      "variants": {
+        "off": false,
+        "on": true
+      }
+    },
+    "productCatalogV2Severity": {
+      "defaultVariant": "high",
+      "description": "Controls v2 error rate for Demo 2. Escalate during canary rollout: none=0%, low=15%, high=40%, critical=75%.",
+      "state": "ENABLED",
+      "variants": {
+        "critical": 75,
+        "high": 40,
+        "low": 15,
+        "none": 0
       }
     },
     "productSummaryModel": {
+      "defaultVariant": "model-a",
       "description": "Selects the model used to generate AI product summaries. Demonstrates multi-model experimentation (cost vs. quality) and kill-switch incident response.",
       "state": "ENABLED",
       "variants": {
-        "off": "off",
         "model-a": "model-a",
-        "model-b": "model-b"
+        "model-b": "model-b",
+        "off": "off"
+      }
+    },
+    "recommendationAlgorithm": {
+      "defaultVariant": "popularity",
+      "description": "Selects the algorithm used by the recommendation service. Demonstrates A/B testing tied to business outcomes via OpenFeature tracking.",
+      "state": "ENABLED",
+      "targeting": {
+        "if": [
+          {
+            "==": [
+              {
+                "var": "userTier"
+              },
+              "premium"
+            ]
+          },
+          "personalized",
+          {
+            "fractional": [
+              {
+                "var": "$flagd.flagKey"
+              },
+              [
+                "popularity",
+                50
+              ],
+              [
+                "collaborative",
+                50
+              ]
+            ]
+          }
+        ]
       },
-      "defaultVariant": "model-a"
+      "variants": {
+        "collaborative": "collaborative",
+        "personalized": "personalized",
+        "popularity": "popularity"
+      }
+    },
+    "recommendationCacheFailure": {
+      "defaultVariant": "off",
+      "description": "Fail recommendation service cache",
+      "state": "ENABLED",
+      "variants": {
+        "off": false,
+        "on": true
+      }
     }
   }
 }

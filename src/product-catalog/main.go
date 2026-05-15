@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"net"
 	"os"
 	"os/signal"
@@ -39,6 +40,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
@@ -342,6 +344,17 @@ func (p *productCatalog) Watch(req *healthpb.HealthCheckRequest, ws healthpb.Hea
 func (p *productCatalog) ListProducts(ctx context.Context, req *pb.Empty) (*pb.ListProductsResponse, error) {
 	span := trace.SpanFromContext(ctx)
 
+	// Evaluate canary flag — TracesHook attaches feature_flag.* to the span.
+	variant := p.catalogVersion(ctx)
+	span.SetAttributes(attribute.String("app.catalog.version", variant))
+
+	if variant == "v2" {
+		if err := simulateCatalogV2Regression(ctx); err != nil {
+			span.SetStatus(otelcodes.Error, err.Error())
+			return nil, err
+		}
+	}
+
 	products, err := loadProductsFromDB(ctx)
 	if err != nil {
 		span.SetStatus(otelcodes.Error, err.Error())
@@ -359,6 +372,17 @@ func (p *productCatalog) GetProduct(ctx context.Context, req *pb.GetProductReque
 	span.SetAttributes(
 		attribute.String("app.product.id", req.Id),
 	)
+
+	// Evaluate canary flag — TracesHook attaches feature_flag.* to the span.
+	variant := p.catalogVersion(ctx)
+	span.SetAttributes(attribute.String("app.catalog.version", variant))
+
+	if variant == "v2" {
+		if err := simulateCatalogV2Regression(ctx); err != nil {
+			span.SetStatus(otelcodes.Error, err.Error())
+			return nil, err
+		}
+	}
 
 	// GetProduct will fail on a specific product when feature flag is enabled
 	if p.checkProductFailure(ctx, req.Id) {
@@ -405,6 +429,54 @@ func (p *productCatalog) SearchProducts(ctx context.Context, req *pb.SearchProdu
 		attribute.Int("app.products_search.count", len(result)),
 	)
 	return &pb.SearchProductsResponse{Results: result}, nil
+}
+
+// catalogVersion evaluates the productCatalogCanary flag and returns the
+// active variant ("v1" or "v2"). The OTel TracesHook registered at startup
+// automatically attaches feature_flag.* SemConv attributes to the active span.
+//
+// The session ID is sent explicitly as the "session-id" gRPC metadata entry
+// by the Next.js frontend for consistent per-session fractional rollout.
+func (p *productCatalog) catalogVersion(ctx context.Context) string {
+	sessionID := ""
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if vals := md.Get("session-id"); len(vals) > 0 {
+			sessionID = vals[0]
+		}
+	}
+
+	client := openfeature.NewClient("productCatalog")
+	variant, _ := client.StringValue(
+		ctx, "productCatalogCanary", "v1",
+		openfeature.NewEvaluationContext(sessionID, map[string]interface{}{}),
+	)
+	return variant
+}
+
+// simulateCatalogV2Regression introduces observable regressions for the v2
+// canary variant so the demo can show them appearing in Jaeger / Grafana and
+// then disappearing after a rollback.
+//
+// Both latency and error rate scale with the `productCatalogV2Severity` flag:
+//
+//	none (0)     → +50ms latency,  0% errors  — baseline v2, just slightly slower
+//	low  (15)    → +150ms latency, 15% errors — noticeable regression
+//	high (40)    → +300ms latency, 40% errors — clearly broken
+//	critical (75)→ +500ms latency, 75% errors — SLO breach, must roll back
+func simulateCatalogV2Regression(ctx context.Context) error {
+	client := openfeature.NewClient("productCatalog")
+	severity, _ := client.IntValue(
+		ctx, "productCatalogV2Severity", 0, openfeature.EvaluationContext{},
+	)
+
+	// Latency scales with severity: 50ms base + severity * 6ms
+	latency := 50 + int(severity)*6
+	time.Sleep(time.Duration(latency) * time.Millisecond)
+
+	if severity > 0 && rand.Int63n(100) < severity {
+		return status.Errorf(codes.Internal, "v2 catalog: simulated regression")
+	}
+	return nil
 }
 
 func (p *productCatalog) checkProductFailure(ctx context.Context, id string) bool {
