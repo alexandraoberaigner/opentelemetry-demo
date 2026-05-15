@@ -46,6 +46,7 @@ class RecommendationService(demo_pb2_grpc.RecommendationServiceServicer):
         span.set_attribute("app.products_recommended.count", len(prod_list))
         span.set_attribute("app.recommendation.algorithm", get_recommendation_algorithm())
         logger.info(f"Receive ListRecommendations for product ids:{prod_list}")
+        logger.info("DEMO_LUKAS_ALEX_001 hello from recommendation service")
 
         # build and return response
         response = demo_pb2.ListRecommendationsResponse()
