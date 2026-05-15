@@ -70,7 +70,7 @@ const Apis = () => ({
   getProduct(productId: string, currencyCode: string) {
     return request<Product>({
       url: `${basePath}/products/${productId}`,
-      queryParams: { currencyCode },
+      queryParams: { currencyCode, sessionId: userId },
     });
   },
   getProductReviews(productId: string) {

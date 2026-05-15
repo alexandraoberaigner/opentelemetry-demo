@@ -139,8 +139,6 @@ exporters:
     endpoint: "http://prometheus:9090/api/v1/otlp"
     tls:
       insecure: true
-    sending_queue:
-      batch:
   opensearch:
     logs_index: otel-logs
     logs_index_time_format: "yyyy-MM-dd"
@@ -154,6 +152,8 @@ exporters:
       queue_size: 1000
       batch:
 processors:
+  batch/metrics:
+    timeout: 10s
   memory_limiter:
     check_interval: 5s
     limit_percentage: 80
@@ -230,9 +230,11 @@ processors:
 
 connectors:
   spanmetrics:
+    metrics_flush_interval: 10s
     dimensions:
       - name: feature_flag.key
       - name: feature_flag.variant
+      - name: app.catalog.version
 
 service:
   pipelines:
@@ -242,7 +244,7 @@ service:
       exporters: [otlp_grpc/jaeger, debug, spanmetrics]
     metrics:
       receivers: [docker_stats, httpcheck/frontend-proxy, hostmetrics, nginx, otlp, postgresql, redis, spanmetrics, kafkametrics]
-      processors: [resourcedetection, memory_limiter]
+      processors: [resourcedetection, memory_limiter, batch/metrics]
       exporters: [otlp_http/prometheus, debug]
     logs:
       receivers: [otlp]

@@ -22,7 +22,7 @@
       "id": 1,
       "options": {
         "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
-        "content": "<h2>Feature Flag Observability — Recommendation A/B Test</h2>\n<b>Is the new model actually making money?</b> — Variant distribution, p95 latency, checkout rate, and per-variant AOV.\n<br/>Per-variant AOV correlated via <code>app.user.id</code> (session ID) across recommendation and checkout logs in OpenSearch PPL.",
+        "content": "<h2>Demo 1 — Recommendation A/B Test (<code>recommendationAlgorithm</code>)</h2>\n<b>Is the new model actually making money?</b> — Per-variant distribution, p95 latency, checkout rate, AOV correlated via session ID.",
         "mode": "html"
       },
       "type": "text",
@@ -47,7 +47,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
-          "expr": "sum by (feature_flag_variant) (rate(traces_span_metrics_calls_total{service_name=\"recommendation\", feature_flag_key=\"recommendationAlgorithm\"}[$__rate_interval]))",
+          "expr": "sum by (feature_flag_variant) (rate(traces_span_metrics_calls_total{service_name=\"recommendation\", feature_flag_key=\"recommendationAlgorithm\", feature_flag_variant!=\"\"}[30s]))",
           "legendFormat": "{{feature_flag_variant}}",
           "refId": "A"
         }
@@ -74,7 +74,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
-          "expr": "histogram_quantile(0.95, sum by (le, feature_flag_variant) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"recommendation\", feature_flag_key=\"recommendationAlgorithm\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le, feature_flag_variant) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"recommendation\", feature_flag_key=\"recommendationAlgorithm\", feature_flag_variant!=\"\"}[30s])))",
           "legendFormat": "p95 — {{feature_flag_variant}}",
           "refId": "A"
         }
@@ -102,7 +102,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
-          "expr": "sum(rate(traces_span_metrics_calls_total{service_name=\"frontend\", span_name=\"oteldemo.CheckoutService/PlaceOrder\"}[$__rate_interval]))",
+          "expr": "sum(rate(traces_span_metrics_calls_total{service_name=\"frontend\", span_name=\"oteldemo.CheckoutService/PlaceOrder\"}[30s]))",
           "legendFormat": "checkouts/s",
           "refId": "A"
         }
@@ -129,46 +129,170 @@
           },
           {
             "matcher": { "id": "byName", "options": "checkouts" },
-            "properties": [
-              { "id": "displayName", "value": "Checkouts" }
-            ]
+            "properties": [{ "id": "displayName", "value": "Checkouts" }]
           },
           {
             "matcher": { "id": "byName", "options": "algorithm" },
-            "properties": [
-              { "id": "displayName", "value": "Recommendation Variant" }
-            ]
+            "properties": [{ "id": "displayName", "value": "Recommendation Variant" }]
           }
         ]
       },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
       "id": 5,
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": { "show": false }
-      },
+      "options": { "showHeader": true, "cellHeight": "sm", "footer": { "show": false } },
       "targets": [
         {
           "datasource": { "type": "grafana-opensearch-datasource", "uid": "webstore-logs" },
-          "query": "source=otel-logs-* | where body = \"order placed\" AND `observedTimestamp` > DATE_SUB(NOW(), INTERVAL 15 MINUTE) | eval user_id = `attributes.app.user.id`, order_amount = `attributes.app.order.amount` | where isnotnull(user_id) | JOIN left=c right=r ON c.user_id = r.user_id [source=otel-logs-* | where body = \"recommendation served\" AND `observedTimestamp` > DATE_SUB(NOW(), INTERVAL 15 MINUTE) | dedup `attributes.app.user.id` | fields `attributes.app.user.id`, `attributes.app.recommendation.algorithm` | rename `attributes.app.user.id` as user_id, `attributes.app.recommendation.algorithm` as algorithm] | stats count() as checkouts, avg(order_amount) as aov by algorithm | eval aov_usd = round(aov / 100, 2) | fields algorithm, checkouts, aov_usd | sort - checkouts",
+          "query": "source=otel-logs-* | where body = \"order placed\" AND `observedTimestamp` > DATE_SUB(NOW(), INTERVAL 5 MINUTE) | eval user_id = `attributes.app.user.id`, order_amount = `attributes.app.order.amount` | where isnotnull(user_id) | JOIN left=c right=r ON c.user_id = r.user_id [source=otel-logs-* | where body = \"recommendation served\" AND `observedTimestamp` > DATE_SUB(NOW(), INTERVAL 5 MINUTE) | dedup `attributes.app.user.id` | fields `attributes.app.user.id`, `attributes.app.recommendation.algorithm` | rename `attributes.app.user.id` as user_id, `attributes.app.recommendation.algorithm` as algorithm] | stats count() as checkouts, avg(order_amount) as aov by algorithm | eval aov_usd = round(aov, 2) | fields algorithm, checkouts, aov_usd | sort - checkouts",
           "queryType": "PPL",
           "refId": "A",
           "format": "table"
         }
       ],
       "title": "AOV by Recommendation Variant — correlated via session ID",
-      "description": "Checkout logs joined with recommendation logs on app.user.id using OpenSearch PPL. Variant originates from the OpenFeature TracingHook span event.",
+      "description": "Checkout logs joined with recommendation logs on app.user.id using OpenSearch PPL.",
       "type": "table"
+    },
+    {
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 20 },
+      "id": 10,
+      "options": {
+        "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
+        "content": "<h2>Demo 2 — Product Catalog Progressive Rollout (<code>productCatalogCanary</code>)</h2>\n<b>Safe canary release — observable regression, instant rollback.</b> Use flagd-ui to step from 5% → 25% → 50% and watch errors + latency appear. Roll back and watch recovery.",
+        "mode": "html"
+      },
+      "type": "text",
+      "title": ""
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisBorderShow": false, "axisLabel": "req/s", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "auto", "stacking": { "mode": "none" } },
+          "unit": "reqps"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": ".*v1.*" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": ".*v2.*" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+          }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 8, "x": 0, "y": 23 },
+      "id": 11,
+      "options": {
+        "legend": { "calcs": ["mean", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
+          "expr": "sum by (app_catalog_version) (rate(traces_span_metrics_calls_total{service_name=\"product-catalog\", app_catalog_version=~\"v1|v2\"}[30s]))",
+          "legendFormat": "{{app_catalog_version}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Canary Traffic Split (v1 / v2)",
+      "description": "Step up v2 rollout in flagd-ui and watch the split change.",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisBorderShow": false, "axisLabel": "latency", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "auto" },
+          "unit": "ms", "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": ".*v1.*" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": ".*v2.*" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
+          }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 8, "x": 8, "y": 23 },
+      "id": 12,
+      "options": {
+        "legend": { "calcs": ["mean", "max", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
+          "expr": "histogram_quantile(0.95, sum by (le, app_catalog_version) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"product-catalog\", app_catalog_version=~\"v1|v2\"}[30s])))",
+          "legendFormat": "p95 — {{app_catalog_version}}",
+          "refId": "A"
+        }
+      ],
+      "title": "p95 Latency — v2 regression visible",
+      "description": "v2 adds 150ms latency. Roll back to 5% and watch recovery.",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "axisBorderShow": false, "axisLabel": "req/s", "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "auto" },
+          "unit": "reqps", "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "total req/s" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "errors/s" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
+              { "id": "custom.fillOpacity", "value": 30 }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 23 },
+      "id": 13,
+      "options": {
+        "legend": { "calcs": ["mean", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
+          "expr": "sum(rate(traces_span_metrics_calls_total{service_name=\"product-catalog\", app_catalog_version=~\"v1|v2\"}[30s]))",
+          "legendFormat": "total req/s",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "webstore-metrics" },
+          "expr": "sum(rate(traces_span_metrics_calls_total{service_name=\"product-catalog\", app_catalog_version=~\"v1|v2\", status_code=\"STATUS_CODE_ERROR\"}[30s]))",
+          "legendFormat": "errors/s",
+          "refId": "B"
+        }
+      ],
+      "title": "Traffic & Errors (req/s)",
+      "description": "Green = total req/s. Red = errors/s. Flip productCatalogV2Severity to low/high to trigger errors.",
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 39,
-  "tags": ["feature-flags", "openfeature", "recommendation"],
+  "tags": ["feature-flags", "openfeature", "recommendation", "canary"],
   "templating": { "list": [] },
-  "time": { "from": "now-30m", "to": "now" },
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "10s",
   "timepicker": {},
   "timezone": "",
-  "title": "Feature Flag — Recommendation A/B Test",
+  "title": "Feature Flag — Observability Dashboard",
   "uid": "feature-flag-recommendation",
   "version": 1
 }
