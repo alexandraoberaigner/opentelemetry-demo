@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/contrib/otelconf"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/baggage"
 	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/metric"
@@ -166,6 +167,7 @@ func main() {
 
 	srv := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.UnaryInterceptor(baggageSessionIDInterceptor),
 	)
 
 	reflection.Register(srv)
@@ -405,6 +407,21 @@ func (p *productCatalog) SearchProducts(ctx context.Context, req *pb.SearchProdu
 		attribute.Int("app.products_search.count", len(result)),
 	)
 	return &pb.SearchProductsResponse{Results: result}, nil
+}
+
+// baggageSessionIDInterceptor copies `session.id` from incoming OTel baggage
+// onto the gRPC server span, so flag-evaluation spans here can be joined with
+// frontend tracking spans by user.
+func baggageSessionIDInterceptor(
+	ctx context.Context,
+	req interface{},
+	_ *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (interface{}, error) {
+	if m := baggage.FromContext(ctx).Member("session.id"); m.Value() != "" {
+		trace.SpanFromContext(ctx).SetAttributes(attribute.String("session.id", m.Value()))
+	}
+	return handler(ctx, req)
 }
 
 func (p *productCatalog) checkProductFailure(ctx context.Context, id string) bool {

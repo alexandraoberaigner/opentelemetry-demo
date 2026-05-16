@@ -111,6 +111,32 @@ possible without per-vendor lock-in.
   evaluations there did not previously attach SemConv attributes).
 - `get_product_summary_model()` helper.
 - `openfeature-hooks-opentelemetry` in `requirements.txt`.
+- **Variant branching in `chat_completions`** (`src/llm/app.py`):
+  - `off` → returns HTTP 503 (kill switch — the AI summary feature is
+    disabled end-to-end without a redeploy).
+  - `model-a` → default path.
+  - `model-b` → simulates a degraded experimental model: 300–800 ms
+    artificial latency and a ~10% chance of HTTP 500.
+- The response `model` field echoes the resolved variant. The
+  `product-reviews` service is already auto-instrumented with
+  [`opentelemetry-instrumentation-openai-v2`](https://pypi.org/project/opentelemetry-instrumentation-openai-v2/),
+  so the per-call span on the LLM client carries
+  `gen_ai.response.model={model-a|model-b}` plus token usage and span
+  status — that is what the per-variant panel filters on.
+- **Frontend `summary_helpful_clicked` tracking event**
+  (`src/frontend/components/ProductReviews/ProductReviews.tsx`): 👍 / 👎
+  buttons under the AI response call
+  `OpenFeature.getClient().track('summary_helpful_clicked', { value: 1|0, helpful, productId })`,
+  feeding the engagement signal for the A/B.
+
+> Why the variant rides on `gen_ai.response.model` instead of the
+> SemConv `feature_flag.*` attributes: the LLM service is intentionally
+> uninstrumented (it is the "black-box LLM"). The `TracingHook` has no
+> active span to attach to inside it, so we propagate the variant back
+> to the caller via the response model field, where the auto-instrumented
+> OpenAI client span captures it. The `feature_flag.*` SemConv story is
+> told by scenarios 1 and 2, where the services are first-class
+> instrumented.
 
 **On stage closing beat:**
 1. Show baseline traffic on `model-a`.
@@ -125,13 +151,9 @@ This single example covers Datadog's "compare multiple models on
 engagement vs cost" and Dynatrace's "act immediately when issues arise."
 
 **Still to wire (next steps):**
-- Read `productSummaryModel` inside the request-handling path in
-  `app.py` and branch behaviour (e.g. simulate different latency / cost
-  per variant; the flag is read but behaviour is not yet branched).
-- Per-variant counters: token cost, requests, errors. Suggested OTel
-  metrics: `llm.tokens.total{model=…}`, `llm.requests.errors{model=…}`.
-- Frontend `client.track("summary_helpful_clicked", …)` for the
-  engagement signal.
+- A Grafana / vendor panel that filters by `gen_ai.response.model` and
+  shows per-variant latency p95, error rate, and the engagement event
+  count from `summary_helpful_clicked`.
 
 ---
 

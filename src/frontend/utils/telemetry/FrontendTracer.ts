@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from '@opentelemetry/core';
+import { CompositePropagator, W3CTraceContextPropagator } from '@opentelemetry/core';
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
@@ -11,6 +11,8 @@ import { browserDetector } from '@opentelemetry/opentelemetry-browser-detector';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { SessionIdProcessor } from './SessionIdProcessor';
+import { SessionBaggagePropagator } from './SessionBaggagePropagator';
+import SessionGateway from '../../gateways/Session.gateway';
 
 const {
   NEXT_PUBLIC_OTEL_SERVICE_NAME = '',
@@ -48,7 +50,7 @@ const FrontendTracer = async () => {
     contextManager,
     propagator: new CompositePropagator({
       propagators: [
-        new W3CBaggagePropagator(),
+        new SessionBaggagePropagator(() => SessionGateway.getSession().userId),
         new W3CTraceContextPropagator()],
     }),
   });

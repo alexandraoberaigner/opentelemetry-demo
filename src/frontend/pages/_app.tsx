@@ -12,6 +12,7 @@ import FrontendTracer from '../utils/telemetry/FrontendTracer';
 import SessionGateway from '../gateways/Session.gateway';
 import { OpenFeatureProvider, OpenFeature } from '@openfeature/react-sdk';
 import { FlagdWebProvider } from '@openfeature/flagd-web-provider';
+import { OtelTrackingProvider } from '../utils/openfeature/OtelTrackingProvider';
 
 declare global {
   interface Window {
@@ -43,13 +44,13 @@ if (typeof window !== 'undefined') {
       }
 
       OpenFeature.setProvider(
-        new FlagdWebProvider({
-          host: window.location.hostname,
-          pathPrefix: 'flagservice',
-          port: port,
-          tls: useTLS,
-          maxRetries: 3,
-          maxDelay: 10000,
+        new OtelTrackingProvider({
+            host: window.location.hostname,
+            pathPrefix: 'flagservice',
+            port: port,
+            tls: useTLS,
+            maxRetries: 3,
+            maxDelay: 10000,
         })
       );
     });

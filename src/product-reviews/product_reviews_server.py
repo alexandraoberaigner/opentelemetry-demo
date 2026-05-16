@@ -12,7 +12,7 @@ import random
 
 # Pip
 import grpc
-from opentelemetry import trace, metrics
+from opentelemetry import trace, metrics, baggage as otel_baggage
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
     OTLPLogExporter,
@@ -20,7 +20,31 @@ from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.trace import Status, StatusCode
+
+
+class BaggageSpanProcessor(SpanProcessor):
+    """Copies whitelisted OTel baggage entries onto every span as attributes."""
+
+    def __init__(self, keys=("session.id",)):
+        self._keys = tuple(keys)
+
+    def on_start(self, span, parent_context=None):
+        bag = otel_baggage.get_all(parent_context)
+        for k in self._keys:
+            v = bag.get(k)
+            if v is not None:
+                span.set_attribute(k, v)
+
+    def on_end(self, span):
+        pass
+
+    def shutdown(self):
+        pass
+
+    def force_flush(self, timeout_millis=30000):
+        return True
 
 # Local
 import logging
@@ -339,6 +363,9 @@ if __name__ == "__main__":
     meter = metrics.get_meter_provider().get_meter(service_name)
 
     product_review_svc_metrics = init_metrics(meter)
+
+    # Copy session.id from incoming OTel baggage onto every span.
+    trace.get_tracer_provider().add_span_processor(BaggageSpanProcessor())
 
     # Initialize Logs
     logger_provider = LoggerProvider(

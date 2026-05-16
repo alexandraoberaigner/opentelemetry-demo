@@ -255,6 +255,49 @@ if browser_traffic_enabled:
                 except Exception as e:
                     logging.error(f"Error in change currency task: {str(e)}")
 
+        @task(3)
+        @pw
+        async def ask_ai_and_rate_summary(self, page: PageWithRetry):
+            """Visits a product page, asks the AI for a review summary, then
+            clicks 👍/👎 on the result. Drives the scenario-3 engagement
+            signal (`summary_helpful_clicked` track event) so per-variant
+            engagement rates land in the backend.
+
+            If the AI never responds (e.g. `productSummaryModel=model-b`
+            returned its simulated 500, or latency exceeded the wait), we
+            skip the click — exactly the "user gave up" pattern that should
+            depress model-b's engagement vs. model-a."""
+            product = random.choice(products)
+            tracer = trace.get_tracer(__name__)
+            with tracer.start_as_current_span(
+                "browser_ask_ai_and_rate_summary",
+                context=Context(),
+                attributes={"product.id": product},
+            ):
+                try:
+                    page.on("console", lambda msg: print(msg.text))
+                    await page.route('**/*', add_baggage_header)
+                    await page.goto(f"/product/{product}", wait_until="domcontentloaded")
+
+                    await page.click('[data-cy="QuickPromptSummarize"]')
+
+                    try:
+                        await page.wait_for_selector('[data-cy="AIAnswer"]', timeout=10000)
+                    except Exception:
+                        logging.info(f"AI summary did not arrive in time for {product} — skipping helpful click")
+                        return
+
+                    if random.random() < 0.75:
+                        await page.click('[data-cy="AIHelpfulYes"]')
+                        logging.info(f"Clicked helpful=YES for product {product}")
+                    else:
+                        await page.click('[data-cy="AIHelpfulNo"]')
+                        logging.info(f"Clicked helpful=NO for product {product}")
+
+                    await page.wait_for_timeout(2000)  # let the browser flush spans
+                except Exception as e:
+                    logging.error(f"Error in ask_ai_and_rate_summary task: {str(e)}")
+
         @task
         @pw
         async def add_product_to_cart(self, page: PageWithRetry):
