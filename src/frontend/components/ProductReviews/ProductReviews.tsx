@@ -5,6 +5,8 @@ import * as S from './ProductReviews.styled';
 import { useProductReview } from '../../providers/ProductReview.provider';
 import { useAiAssistant } from '../../providers/ProductAIAssistant.provider';
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/router';
+import { OpenFeature } from '@openfeature/react-sdk';
 import { CypressFields } from '../../utils/enums/CypressFields';
 
 const clamp = (n: number, min = 0, max = 5) => Math.max(min, Math.min(max, n));
@@ -55,17 +57,35 @@ const ProductReviews = () => {
     // AI Assistant (provider-driven)
     const [aiQuestion, setAiQuestion] = useState('');
     const { sendAiRequest, aiResponse, aiLoading, aiError, reset } = useAiAssistant();
+    const [helpfulFeedback, setHelpfulFeedback] = useState<null | 'yes' | 'no'>(null);
+
+    const router = useRouter();
+    const productId = String(router.query.productId ?? '');
 
     const handleAskAI = (questionOverride?: string) => {
         const q = (questionOverride ?? aiQuestion).trim();
         if (!q) return;
         reset(); // optional: clears previous result
+        setHelpfulFeedback(null);
         sendAiRequest({ question: q });
     };
 
     const handleQuickPrompt = (prompt: string) => {
         setAiQuestion(prompt);
         handleAskAI(prompt);
+    };
+
+    const handleHelpful = (helpful: boolean) => {
+        // OpenFeature Tracking API — engagement signal for the
+        // productSummaryModel A/B (scenario 3). The flagd-resolved variant is
+        // attached server-side via the TracingHook on the LLM service; this
+        // event lets us correlate per-variant engagement in the backend.
+        OpenFeature.getClient().track('summary_helpful_clicked', {
+            value: helpful ? 1 : 0,
+            helpful,
+            productId,
+        });
+        setHelpfulFeedback(helpful ? 'yes' : 'no');
     };
 
   return (
@@ -133,10 +153,34 @@ const ProductReviews = () => {
             )}
 
             {aiResponse && (
-                <S.AIMessage aria-live="polite" data-cy="AIAnswer">
-                    <strong>AI Response:</strong>{' '}
-                    {typeof aiResponse === 'string' ? aiResponse : aiResponse.text}
-                </S.AIMessage>
+                <>
+                    <S.AIMessage aria-live="polite" data-cy="AIAnswer">
+                        <strong>AI Response:</strong>{' '}
+                        {typeof aiResponse === 'string' ? aiResponse : aiResponse.text}
+                    </S.AIMessage>
+                    <S.HelpfulRow data-cy="AIHelpfulRow">
+                        <span>Was this helpful?</span>
+                        <S.HelpfulButton
+                            type="button"
+                            onClick={() => handleHelpful(true)}
+                            disabled={helpfulFeedback !== null}
+                            data-cy="AIHelpfulYes"
+                            aria-label="Mark AI response helpful"
+                        >
+                            👍 Yes
+                        </S.HelpfulButton>
+                        <S.HelpfulButton
+                            type="button"
+                            onClick={() => handleHelpful(false)}
+                            disabled={helpfulFeedback !== null}
+                            data-cy="AIHelpfulNo"
+                            aria-label="Mark AI response not helpful"
+                        >
+                            👎 No
+                        </S.HelpfulButton>
+                        {helpfulFeedback && <span>Thanks for the feedback.</span>}
+                    </S.HelpfulRow>
+                </>
             )}
         </S.AskAISection>
 

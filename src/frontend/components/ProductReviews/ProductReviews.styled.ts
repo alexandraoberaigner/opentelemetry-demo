@@ -253,3 +253,30 @@ export const AIMessage = styled.p`
   line-height: 1.5;
   color: ${({ theme }) => theme.colors.otelGray};
 `;
+
+export const HelpfulRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: ${({ theme }) => theme.sizes.mSmall};
+  color: ${({ theme }) => theme.colors.otelGray};
+`;
+
+export const HelpfulButton = styled.button`
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.otelYellow};
+  color: ${({ theme }) => theme.colors.otelGray};
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;

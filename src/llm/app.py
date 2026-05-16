@@ -94,19 +94,46 @@ def chat_completions():
 
     app.logger.info(f"Received a chat completion request: '{messages}'")
 
+    # Scenario 3 (productSummaryModel): pick a variant for this request.
+    # `off` is a kill switch; `model-b` simulates a degraded experimental
+    # model (extra latency + small error rate). The variant is echoed back
+    # in the response `model` field so the caller's `openai`
+    # auto-instrumentation records it as `gen_ai.response.model`, which is
+    # what the talk filters by per variant.
+    summary_model = get_product_summary_model()
+    app.logger.info(f"productSummaryModel feature flag: {summary_model}")
+
+    if summary_model == "off":
+        return jsonify({
+            "error": {
+                "message": "AI summaries are temporarily disabled.",
+                "type": "service_unavailable",
+            }
+        }), 503
+
+    if summary_model == "model-b":
+        time.sleep(random.uniform(0.3, 0.8))
+        if random.random() < 0.1:
+            return jsonify({
+                "error": {
+                    "message": "model-b internal error",
+                    "type": "internal_error",
+                }
+            }), 500
+
     last_message = messages[-1]["content"]
 
     app.logger.info(f"last_message is: '{last_message}'")
 
     if 'What age(s) is this recommended for?' in last_message:
         response_text = 'This product is recommended for ages 7 and above.'
-        return build_response(model, messages, response_text)
+        return build_response(summary_model, messages, response_text)
     elif 'Were there any negative reviews?' in last_message:
         response_text = 'No, there were no reviews less than three stars for this product.'
-        return build_response(model, messages, response_text)
+        return build_response(summary_model, messages, response_text)
     elif not ('Can you summarize the product reviews?' in last_message or 'Based on the tool results, answer the original question about product ID' in last_message):
         response_text = 'Sorry, I\'m not able to answer that question.'
-        return build_response(model, messages, response_text)
+        return build_response(summary_model, messages, response_text)
 
     # otherwise, process the product review summary
     product_id = parse_product_id(last_message)
@@ -135,7 +162,7 @@ def chat_completions():
                 "id": f"chatcmpl-mock-{int(time.time())}",
                 "object": "chat.completion",
                 "created": int(time.time()),
-                "model": model,
+                "model": summary_model,
                 "choices": [{
                     "index": 0,
                     "message": {
@@ -164,7 +191,7 @@ def chat_completions():
         # Generate the response
         response_text = generate_response(product_id)
 
-        return build_response(model, messages, response_text)
+        return build_response(summary_model, messages, response_text)
 
 def build_response(model, messages, response_text):
     app.logger.info(f"Processing a response: '{response_text}'")
