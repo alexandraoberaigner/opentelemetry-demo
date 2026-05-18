@@ -108,7 +108,7 @@ def main():
     print("║  Demo 1 — Product Catalog Canary Rollout     ║")
     print("╚══════════════════════════════════════════════╝")
     print()
-    print("  Dashboard: http://localhost:8080/grafana/d/feature-flag-recommendation")
+    print("  Dashboard: http://localhost:8080/grafana/d/feature-flag-recommendation?from=now-5m&to=now&refresh=5s")
     print("  Flags UI:  http://localhost:8080/feature/")
 
     # ── Baseline ──────────────────────────────────────────────────────────────

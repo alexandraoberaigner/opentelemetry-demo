@@ -88,7 +88,7 @@ def main():
     print("║  Demo 3 — Recommendation A/B Test           ║")
     print("╚══════════════════════════════════════════════╝")
     print()
-    print("  Dashboard: http://localhost:8080/grafana/d/feature-flag-recommendation")
+    print("  Dashboard: http://localhost:8080/grafana/d/feature-flag-recommendation?from=now-5m&to=now&refresh=5s")
     print("  Jaeger:    http://localhost:8080/jaeger/ui")
 
     # ── Baseline ──────────────────────────────────────────────────────────────
@@ -101,6 +101,9 @@ def main():
     set_default(d, "recommendationAlgorithm", "popularity")
     save(d)
     start_k6()
+    print()
+    print("  NOTE: if the dashboard still shows v2 traffic, it is historical")
+    print("  data from demo1. Wait ~30s for the [30s] rate window to flush.")
     wait_enter(
         "Baseline: all users on 'popularity'.\n"
         "  p95 low. Single variant in impressions chart. AOV table loading."
