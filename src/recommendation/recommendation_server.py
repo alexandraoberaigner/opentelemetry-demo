@@ -6,6 +6,7 @@
 
 # Python
 import hashlib
+import math
 import os
 import random
 import time
@@ -165,8 +166,12 @@ def get_product_list(request_product_ids, user_id=""):
             seed = sum(ord(c) for c in (request_product_ids_str or "anon"))
             rng = random.Random(seed)
             prod_list = rng.sample(filtered_products, num_return)
-            # Simulate inference latency for the heavier personalized model
-            time.sleep(random.uniform(0.05, 0.12))
+            # Simulate inference latency for the heavier personalized model.
+            # Log-normal distribution: median ~120ms, p95 ~250ms — realistic
+            # inference tail without being alarming.
+            latency = random.lognormvariate(mu=math.log(0.12), sigma=0.35)
+            latency = max(0.04, min(latency, 1.0))  # clamp 40ms–1s
+            time.sleep(latency)
         else:
             indices = random.sample(range(num_products), num_return)
             prod_list = [filtered_products[i] for i in indices]

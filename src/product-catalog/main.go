@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"math"
 	"math/rand"
 	"net"
 	"os"
@@ -470,25 +471,39 @@ func (p *productCatalog) catalogVersion(ctx context.Context) string {
 	return variant
 }
 
+// randNorm returns a standard normal sample via Box-Muller transform.
+func randNorm() float64 {
+	u1, u2 := rand.Float64(), rand.Float64()
+	return math.Sqrt(-2*math.Log(u1+1e-10)) * math.Cos(2*math.Pi*u2)
+}
+
 // simulateCatalogV2Regression introduces observable regressions for the v2
 // canary variant so the demo can show them appearing in Jaeger / Grafana and
 // then disappearing after a rollback.
 //
 // Both latency and error rate scale with the `productCatalogV2Severity` flag:
 //
-//	none (0)     → +50ms latency,  0% errors  — baseline v2, just slightly slower
-//	low  (15)    → +150ms latency, 15% errors — noticeable regression
-//	high (40)    → +300ms latency, 40% errors — clearly broken
-//	critical (75)→ +500ms latency, 75% errors — SLO breach, must roll back
+//	none (0)     → p50  30ms, p95  ~50ms,  0% errors  — baseline v2, barely noticeable
+//	low  (15)    → p50  90ms, p95 ~150ms, 15% errors — noticeable regression
+//	high (40)    → p50 190ms, p95 ~310ms, 40% errors — clearly broken
+//	critical (75)→ p50 330ms, p95 ~540ms, 75% errors — SLO breach, must roll back
 func simulateCatalogV2Regression(ctx context.Context) error {
 	client := openfeature.NewClient("productCatalog")
 	severity, _ := client.IntValue(
 		ctx, "productCatalogV2Severity", 0, openfeature.EvaluationContext{},
 	)
 
-	// Latency scales with severity: 50ms base + severity * 6ms
-	latency := 50 + int(severity)*6
-	time.Sleep(time.Duration(latency) * time.Millisecond)
+	// Log-normal latency per severity — median and sigma tuned so p95 lands
+	// clearly above v1 (~10ms) at each severity step:
+	//   none  → median  30ms, p95  ~55ms  — barely noticeable
+	//   low   → median  80ms, p95 ~145ms  — noticeable regression
+	//   high  → median 180ms, p95 ~330ms  — clearly broken
+	//   critical→median 350ms, p95 ~640ms — SLO breach
+	medianMs := 30.0 + float64(severity)*4.0
+	sigma := 0.30
+	rawMs := math.Exp(math.Log(medianMs) + sigma*randNorm())
+	latencyMs := math.Max(10, math.Min(rawMs, 3000))
+	time.Sleep(time.Duration(latencyMs) * time.Millisecond)
 
 	if severity > 0 && rand.Int63n(100) < severity {
 		return status.Errorf(codes.Internal, "v2 catalog: simulated regression")

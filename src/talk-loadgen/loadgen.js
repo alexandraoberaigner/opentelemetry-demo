@@ -46,19 +46,19 @@ const PEOPLE = [
 const SCENARIOS = {
   background: {
     executor: 'constant-vus',
-    vus: 5,
+    vus: 3,
     duration: '30m',
   },
 
   demo1: {
     executor: 'constant-vus',
-    vus: 20,
+    vus: 8,
     duration: '30m',
   },
 
   demo2: {
     executor: 'constant-vus',
-    vus: 30,
+    vus: 10,
     duration: '30m',
   },
 };

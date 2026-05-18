@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 global:
-  # Reduced from 60s to 15s for faster dashboard response during the demo.
-  scrape_interval: 15s
+  # 5s scrape — 3 points per [15s] window, smooth lines for the demo.
+  scrape_interval: 5s
 
 otlp:
   keep_identifying_resource_attributes: true

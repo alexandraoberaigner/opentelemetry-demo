@@ -4,10 +4,13 @@ exporters:
     endpoint: "${DT_ENDPOINT}"
     headers:
       Authorization: "Api-Token ${DT_API_TOKEN}"
+    retry_on_failure:
+      enabled: false
+    sending_queue:
+      enabled: false
 
 processors:
   cumulativetodelta:
-  batch:
 
 service:
   pipelines:

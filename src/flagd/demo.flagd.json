@@ -162,7 +162,7 @@
       }
     },
     "productCatalogV2Severity": {
-      "defaultVariant": "low",
+      "defaultVariant": "high",
       "description": "Controls v2 error rate for Demo 2. Escalate during canary rollout: none=0%, low=15%, high=40%, critical=75%.",
       "state": "ENABLED",
       "variants": {

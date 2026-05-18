@@ -152,8 +152,12 @@ exporters:
       queue_size: 1000
       batch:
 processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
   batch/metrics:
-    timeout: 10s
+    timeout: 5s
+    send_batch_size: 512
   memory_limiter:
     check_interval: 5s
     limit_percentage: 80
@@ -230,7 +234,10 @@ processors:
 
 connectors:
   spanmetrics:
-    metrics_flush_interval: 10s
+    metrics_flush_interval: 5s
+    histogram:
+      explicit:
+        buckets: [10ms, 25ms, 50ms, 75ms, 100ms, 150ms, 200ms, 250ms, 300ms, 400ms, 500ms, 750ms, 1000ms, 2500ms, 5000ms]
     dimensions:
       - name: feature_flag.key
       - name: feature_flag.variant
