@@ -23,6 +23,7 @@ import signal
 import subprocess
 import sys
 import time
+import webbrowser
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent.parent
 FLAGD_JSON = REPO_ROOT / "src" / "flagd" / "demo.flagd.json"
@@ -107,9 +108,11 @@ def main():
     print("╔══════════════════════════════════════════════╗")
     print("║  Demo 1 — Product Catalog Canary Rollout     ║")
     print("╚══════════════════════════════════════════════╝")
+    dashboard_url = "http://localhost:8080/grafana/d/feature-flag-recommendation?from=now-5m&to=now&refresh=5s"
     print()
-    print("  Dashboard: http://localhost:8080/grafana/d/feature-flag-recommendation?from=now-5m&to=now&refresh=5s")
+    print(f"  Dashboard: {dashboard_url}")
     print("  Flags UI:  http://localhost:8080/feature/")
+    webbrowser.open(dashboard_url)
 
     # ── Baseline ──────────────────────────────────────────────────────────────
     step("0", "4", "Baseline — resetting flags, starting load")
