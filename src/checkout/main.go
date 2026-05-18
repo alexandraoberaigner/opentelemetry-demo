@@ -28,6 +28,7 @@ import (
 	otelhooks "github.com/open-feature/go-sdk-contrib/hooks/open-telemetry/pkg"
 	flagd "github.com/open-feature/go-sdk-contrib/providers/flagd/pkg"
 	"github.com/open-feature/go-sdk/openfeature"
+	"github.com/open-feature/go-sdk/openfeature/multi"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -132,6 +133,26 @@ func initLoggerProvider() *sdklog.LoggerProvider {
 	return loggerProvider
 }
 
+// otelTrackingProvider implements the OpenFeature Tracker interface.
+// It receives Track() calls from the OpenFeature client and emits them
+// as structured OTel log records, carrying trace context automatically.
+// Flag evaluation (BooleanEvaluation, etc.) is delegated to the embedded
+// NoopProvider — the flagd sub-provider in the multi-provider handles that.
+type otelTrackingProvider struct {
+	openfeature.NoopProvider
+}
+
+func (p *otelTrackingProvider) Metadata() openfeature.Metadata {
+	return openfeature.NamedProviderMetadata("otel-tracking")
+}
+
+func (p *otelTrackingProvider) Track(ctx context.Context, eventName string, evalCtx openfeature.EvaluationContext, details openfeature.TrackingEventDetails) {
+	slog.InfoContext(ctx, eventName,
+		slog.String("app.user.id", evalCtx.TargetingKey()),
+		slog.Float64("app.order.amount", details.Value()),
+	)
+}
+
 type checkout struct {
 	productCatalogSvcAddr string
 	cartSvcAddr           string
@@ -192,7 +213,16 @@ func main() {
 		logger.Error(fmt.Sprintf("Error creating flagd provider: %v", err))
 	}
 
-	openfeature.SetProvider(provider)
+	ofProvider, err := multi.NewProvider(
+		multi.StrategyFirstMatch,
+		multi.WithProvider("flagd", provider),
+		multi.WithProvider("otel-tracking", &otelTrackingProvider{}),
+	)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error creating multi-provider: %v", err))
+	}
+
+	openfeature.SetProvider(ofProvider)
 	openfeature.AddHooks(otelhooks.NewTracesHook())
 
 	tracer = tp.Tracer("checkout")
@@ -379,6 +409,18 @@ func (cs *checkout) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (
 		slog.Float64("app.order.amount", totalPriceFloat),
 		slog.Int("app.order.items.count", len(prep.orderItems)),
 		slog.String("app.shipping.tracking.id", shippingTrackingID),
+	)
+
+	// Emit a checkout.completed tracking event via the OpenFeature Tracking API.
+	// This service has no knowledge of which recommendation algorithm was active —
+	// it only records that a checkout happened and the order value.
+	// The otelTrackingProvider turns this into an OTel log record, which OpenSearch
+	// can join with recommendation logs on app.user.id to compute AOV per variant.
+	openfeature.NewClient("checkout").Track(
+		ctx,
+		"checkout.completed",
+		openfeature.NewEvaluationContext(req.UserId, nil),
+		openfeature.NewTrackingEventDetails(totalPriceFloat).Add("currencyCode", req.UserCurrency),
 	)
 
 	if err := cs.sendOrderConfirmation(ctx, req.Email, orderResult); err != nil {
