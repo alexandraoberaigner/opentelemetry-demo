@@ -94,6 +94,10 @@ def main():
     # ── Baseline ──────────────────────────────────────────────────────────────
     step("0", "2", "Baseline — resetting flags, starting load")
     d = load()
+    # Clear any canary state left over from demo1
+    d["flags"]["productCatalogCanary"].pop("targeting", None)
+    d["flags"]["productCatalogCanary"]["defaultVariant"] = "v1"
+    set_default(d, "productCatalogV2Severity", "none")
     set_default(d, "recommendationAlgorithm", "popularity")
     save(d)
     start_k6()
