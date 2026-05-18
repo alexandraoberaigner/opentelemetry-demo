@@ -132,21 +132,6 @@
       "defaultVariant": "v1",
       "description": "Progressive rollout of a v2 product-catalog implementation. Demonstrates canary releases observable via OTel feature-flag SemConv attributes on spans.",
       "state": "ENABLED",
-      "targeting": {
-        "fractional": [
-          {
-            "var": "$flagd.targetingKey"
-          },
-          [
-            "v1",
-            50
-          ],
-          [
-            "v2",
-            50
-          ]
-        ]
-      },
       "variants": {
         "v1": "v1",
         "v2": "v2"
@@ -162,7 +147,7 @@
       }
     },
     "productCatalogV2Severity": {
-      "defaultVariant": "high",
+      "defaultVariant": "none",
       "description": "Controls v2 error rate for Demo 2. Escalate during canary rollout: none=0%, low=15%, high=40%, critical=75%.",
       "state": "ENABLED",
       "variants": {

@@ -227,6 +227,21 @@ loadgen-demo2:
 	@echo "Generating Demo 2 data (product catalog canary, Ctrl+C to stop)..."
 	k6 run -e SCENARIO=demo2 $(LOADGEN_DIR)/loadgen.js
 
+# ── Talk demo automation (interactive flag sequences) ──────────────────────
+# Requires: python3, k6 (brew install k6)
+
+.PHONY: reset
+reset: ## Reset all demo flags to safe defaults before going on stage
+	@python3 $(LOADGEN_DIR)/reset.py
+
+.PHONY: demo1
+demo1: ## Demo 1 — canary rollout: interactive escalation (v2% + severity) + k6
+	@python3 $(LOADGEN_DIR)/demo1.py
+
+.PHONY: demo3
+demo3: ## Demo 3 — recommendation A/B: interactive flag flip + k6
+	@python3 $(LOADGEN_DIR)/demo3.py
+
 .PHONY: stop
 stop:
 	$(DOCKER_COMPOSE_CMD) $(DOCKER_COMPOSE_ENV) down --remove-orphans --volumes
