@@ -112,8 +112,14 @@ def chat_completions():
         }), 503
 
     if summary_model == "model-b":
-        time.sleep(random.uniform(0.3, 0.8))
-        if random.random() < 0.1:
+        # Wider latency window per call. The product-reviews flow makes two
+        # LLM calls per "summarize" prompt (tool-call round-trip), so the
+        # user-visible round-trip is ~1.0–3.0 s for model-b vs ~0.5–1.0 s
+        # for model-a. The playwright task biases clicks below/above its
+        # `slow_threshold_s` (1.5 s), so this gap pushes model-b firmly
+        # into "slow" territory and depresses engagement.
+        time.sleep(random.uniform(0.5, 1.5))
+        if random.random() < 0.15:
             return jsonify({
                 "error": {
                     "message": "model-b internal error",

@@ -281,18 +281,32 @@ if browser_traffic_enabled:
 
                     await page.click('[data-cy="QuickPromptSummarize"]')
 
+                    import time as _time
+                    started = _time.monotonic()
                     try:
                         await page.wait_for_selector('[data-cy="AIAnswer"]', timeout=10000)
                     except Exception:
                         logging.info(f"AI summary did not arrive in time for {product} — skipping helpful click")
                         return
+                    elapsed_s = _time.monotonic() - started
 
-                    if random.random() < 0.75:
+                    # "Annoyed user" model: fast answers earn 👍, slow answers
+                    # earn 👎. The mock LLM's `model-b` variant adds 0.5-1.5 s
+                    # of latency per call (two calls per summarize round-trip
+                    # ⇒ ~1.0-3.0 s total), so it lands above the 1.5 s
+                    # threshold far more often than `model-a` does. Combined
+                    # with the steep yes/no bias (0.90 vs 0.20), this produces
+                    # an engagement-rate gap of roughly 0.85 vs 0.30 between
+                    # variants.
+                    slow_threshold_s = 1.5
+                    prob_yes = 0.90 if elapsed_s < slow_threshold_s else 0.20
+
+                    if random.random() < prob_yes:
                         await page.click('[data-cy="AIHelpfulYes"]')
-                        logging.info(f"Clicked helpful=YES for product {product}")
+                        logging.info(f"Clicked helpful=YES for {product} (elapsed={elapsed_s:.2f}s)")
                     else:
                         await page.click('[data-cy="AIHelpfulNo"]')
-                        logging.info(f"Clicked helpful=NO for product {product}")
+                        logging.info(f"Clicked helpful=NO  for {product} (elapsed={elapsed_s:.2f}s)")
 
                     await page.wait_for_timeout(2000)  # let the browser flush spans
                 except Exception as e:
