@@ -217,6 +217,10 @@ loadgen-background:
 	@echo "Starting background traffic (Ctrl+C to stop)..."
 	k6 run -e SCENARIO=background $(LOADGEN_DIR)/loadgen.js
 
+.PHONY: loadgen-stop
+loadgen-stop: ## Stop any running k6 load generator
+	@pkill -f "k6 run.*SCENARIO" && echo "k6 stopped." || echo "No k6 process running."
+
 .PHONY: loadgen-demo1
 loadgen-demo1:
 	@echo "Generating Demo 1 data (product catalog canary, Ctrl+C to stop)..."
