@@ -47,12 +47,12 @@ def set_default(d, key, variant):
 def start_k6():
     global k6_proc
     print()
-    print("  Starting k6 demo1 (recommendation traffic)...")
+    print("  Starting k6 demo3 (recommendation traffic)...")
     subprocess.run(["pkill", "-f", "k6 run.*SCENARIO"], capture_output=True)
     time.sleep(1)
     log = open("/tmp/k6-demo3.log", "w")
     k6_proc = subprocess.Popen(
-        ["k6", "run", "-e", "SCENARIO=demo1", str(LOADGEN_JS)],
+        ["k6", "run", "-e", "SCENARIO=demo3", str(LOADGEN_JS)],
         stdout=log, stderr=log,
     )
     print(f"  k6 PID {k6_proc.pid} — log: /tmp/k6-demo3.log")

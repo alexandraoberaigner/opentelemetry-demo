@@ -67,13 +67,12 @@ def set_canary(d, v2_pct):
 def start_k6():
     global k6_proc
     print()
-    print("  Starting k6 demo2 (product-catalog traffic)...")
-    # Kill any existing k6
+    print("  Starting k6 demo1 (product-catalog traffic)...")
     subprocess.run(["pkill", "-f", "k6 run.*SCENARIO"], capture_output=True)
     time.sleep(1)
     log = open("/tmp/k6-demo1.log", "w")
     k6_proc = subprocess.Popen(
-        ["k6", "run", "-e", "SCENARIO=demo2", str(LOADGEN_JS)],
+        ["k6", "run", "-e", "SCENARIO=demo1", str(LOADGEN_JS)],
         stdout=log, stderr=log,
     )
     print(f"  k6 PID {k6_proc.pid} — log: /tmp/k6-demo1.log")

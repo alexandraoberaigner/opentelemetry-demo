@@ -219,13 +219,13 @@ loadgen-background:
 
 .PHONY: loadgen-demo1
 loadgen-demo1:
-	@echo "Generating Demo 1 data (recommendation A/B test, Ctrl+C to stop)..."
+	@echo "Generating Demo 1 data (product catalog canary, Ctrl+C to stop)..."
 	k6 run -e SCENARIO=demo1 $(LOADGEN_DIR)/loadgen.js
 
-.PHONY: loadgen-demo2
-loadgen-demo2:
-	@echo "Generating Demo 2 data (product catalog canary, Ctrl+C to stop)..."
-	k6 run -e SCENARIO=demo2 $(LOADGEN_DIR)/loadgen.js
+.PHONY: loadgen-demo3
+loadgen-demo3:
+	@echo "Generating Demo 3 data (recommendation A/B test, Ctrl+C to stop)..."
+	k6 run -e SCENARIO=demo3 $(LOADGEN_DIR)/loadgen.js
 
 # ── Talk demo automation (interactive flag sequences) ──────────────────────
 # Requires: python3, k6 (brew install k6)

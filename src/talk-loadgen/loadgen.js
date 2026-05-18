@@ -50,15 +50,17 @@ const SCENARIOS = {
     duration: '30m',
   },
 
+  // Demo 1: product catalog canary — drives productCatalogCanary flag evaluations
   demo1: {
     executor: 'constant-vus',
-    vus: 8,
+    vus: 10,
     duration: '30m',
   },
 
-  demo2: {
+  // Demo 3: recommendation A/B — drives recommendationAlgorithm flag evaluations
+  demo3: {
     executor: 'constant-vus',
-    vus: 10,
+    vus: 8,
     duration: '30m',
   },
 };
@@ -97,8 +99,8 @@ function headers(userId) {
 
 // ── Flows ─────────────────────────────────────────────────────────────────────
 
-/** Demo 1: recommendation impression → conditional checkout */
-function demo1Flow() {
+/** Demo 3: recommendation impression → conditional checkout */
+function demo3Flow() {
   const userId  = randomUserId();
   const product = randomItem(PRODUCTS);
   const h       = headers(userId);
@@ -151,8 +153,8 @@ function demo1Flow() {
   sleep(Math.random() * 2 + 0.5);
 }
 
-/** Demo 2: product catalog browsing — triggers canary flag evaluation */
-function demo2Flow() {
+/** Demo 1: product catalog browsing — triggers productCatalogCanary flag evaluation */
+function demo1Flow() {
   const userId  = randomUserId();
   const product = randomItem(PRODUCTS);
   const h       = headers(userId);
@@ -198,9 +200,9 @@ function backgroundFlow() {
 export default function () {
   switch (SCENARIO) {
     case 'demo1':      demo1Flow();      break;
-    case 'demo2':      demo2Flow();      break;
+    case 'demo3':      demo3Flow();      break;
     case 'background': backgroundFlow(); break;
     default:
-      console.error(`Unknown scenario: ${SCENARIO}. Use background, demo1, or demo2.`);
+      console.error(`Unknown scenario: ${SCENARIO}. Use background, demo1, or demo3.`);
   }
 }
