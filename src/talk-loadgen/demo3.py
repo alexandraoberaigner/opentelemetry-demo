@@ -99,8 +99,11 @@ def main():
     d["flags"]["productCatalogCanary"].pop("targeting", None)
     d["flags"]["productCatalogCanary"]["defaultVariant"] = "v1"
     set_default(d, "productCatalogV2Severity", "none")
+    # Remove targeting so ALL users get popularity — no premium routing yet
+    d["flags"]["recommendationAlgorithm"].pop("targeting", None)
     set_default(d, "recommendationAlgorithm", "popularity")
     save(d)
+    print("  ✓  recommendationAlgorithm targeting removed → all users on popularity")
     start_k6()
     print()
     print("  NOTE: if the dashboard still shows v2 traffic, it is historical")
@@ -113,7 +116,19 @@ def main():
     # ── Step 1: Flip to personalized ─────────────────────────────────────────
     step("1", "2", "Flip to personalized")
     d = load()
-    set_default(d, "recommendationAlgorithm", "personalized")
+    # Restore targeting: premium → personalized, standard → 50/50 popularity/collaborative
+    d["flags"]["recommendationAlgorithm"]["targeting"] = {
+        "if": [
+            {"==": [{"var": "userTier"}, "premium"]},
+            "personalized",
+            {"fractional": [
+                {"var": "$flagd.flagKey"},
+                ["popularity", 50],
+                ["collaborative", 50],
+            ]},
+        ]
+    }
+    set_default(d, "recommendationAlgorithm", "popularity")
     save(d)
     wait_enter(
         "Flipped. Watch impressions shift to 'personalized'.\n"
@@ -143,9 +158,10 @@ def main():
     answer = input("  Roll back to popularity? (y/N) ").strip().lower()
     if answer == "y":
         d = load()
+        d["flags"]["recommendationAlgorithm"].pop("targeting", None)
         set_default(d, "recommendationAlgorithm", "popularity")
         save(d)
-        print("  ✓  Rolled back to popularity.")
+        print("  ✓  Rolled back — targeting removed, all users on popularity.")
 
     print()
     print("  ✅  Demo 3 complete.")
