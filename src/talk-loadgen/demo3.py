@@ -45,15 +45,19 @@ def set_default(d, key, variant):
     print(f"  ✓  {key} → {variant}")
 
 
-def start_k6():
+def start_k6(personalized=False):
     global k6_proc
+    if k6_proc:
+        k6_proc.terminate()
+        time.sleep(1)
     print()
-    print("  Starting k6 demo3 (recommendation traffic)...")
+    label = "personalized" if personalized else "baseline"
+    print(f"  Starting k6 demo3 ({label} — PERSONALIZED={str(personalized).lower()})...")
     subprocess.run(["pkill", "-f", "k6 run.*SCENARIO"], capture_output=True)
     time.sleep(1)
     log = open("/tmp/k6-demo3.log", "w")
     k6_proc = subprocess.Popen(
-        ["k6", "run", "-e", "SCENARIO=demo3", str(LOADGEN_JS)],
+        ["k6", "run", "-e", "SCENARIO=demo3", "-e", f"PERSONALIZED={str(personalized).lower()}", str(LOADGEN_JS)],
         stdout=log, stderr=log,
     )
     print(f"  k6 PID {k6_proc.pid} — log: /tmp/k6-demo3.log")
@@ -110,7 +114,7 @@ def main():
     set_default(d, "recommendationAlgorithm", "popularity")
     save(d)
     print("  ✓  recommendationAlgorithm → popularity for all users (userTier still evaluated)")
-    start_k6()
+    start_k6(personalized=False)
     wait_enter(
         "Baseline: all users on 'popularity'.\n"
         "  p95 low. Single variant in impressions chart. AOV table loading."
@@ -133,6 +137,7 @@ def main():
     }
     set_default(d, "recommendationAlgorithm", "popularity")
     save(d)
+    start_k6(personalized=True)
     wait_enter(
         "Flipped. Watch impressions shift to 'personalized'.\n"
         "  p95 rising (~200ms vs ~20ms).\n"
@@ -166,6 +171,7 @@ def main():
         }
         set_default(d, "recommendationAlgorithm", "popularity")
         save(d)
+        start_k6(personalized=False)
         print("  ✓  Rolled back — all users on popularity.")
 
     print()

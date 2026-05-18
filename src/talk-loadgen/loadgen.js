@@ -113,16 +113,17 @@ function demo3Flow() {
   check(recResp, { 'recommendations 200': r => r.status === 200 });
   sleep(0.2);
 
-  // 2. Determine variant based on SHA-256 userTier — matches the recommendation
-  //    service's derive_user_tier() exactly.
+  // 2. Determine userTier — matches recommendation_server.py:derive_user_tier() exactly.
+  //    Cart size scales with userTier only when PERSONALIZED=true (flag is flipped).
+  //    At baseline all users buy 1 item so AOV starts equal across variants.
   const isPremium      = userTier(userId) === 'premium';
+  const personalized   = (__ENV.PERSONALIZED === 'true');
   const conversionRate = isPremium ? 0.85 : 0.45;
 
   if (Math.random() < conversionRate) {
-    // Premium users (personalized) buy 2-3 items → higher AOV.
-    // Standard users (popularity) buy 1 item → lower AOV.
-    // Both pick from the full product list — the difference comes from basket size.
-    const itemCount = isPremium ? Math.floor(Math.random() * 2) + 2 : 1;
+    // When personalized is active: premium users buy 2-3 items → higher AOV.
+    // At baseline (popularity for all): everyone buys 1 item → equal AOV.
+    const itemCount = (personalized && isPremium) ? Math.floor(Math.random() * 2) + 2 : 1;
     const usedProducts = new Set();
 
     for (let i = 0; i < itemCount; i++) {
