@@ -175,6 +175,20 @@
         "collaborative": "collaborative",
         "personalized": "personalized",
         "popularity": "popularity"
+      },
+      "targeting": {
+        "if": [
+          {
+            "==": [
+              {
+                "var": "userTier"
+              },
+              "premium"
+            ]
+          },
+          "popularity",
+          "popularity"
+        ]
       }
     },
     "recommendationCacheFailure": {

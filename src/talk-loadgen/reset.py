@@ -54,8 +54,10 @@ def main():
     # Demo 2 — AI model
     set_default(d, "productSummaryModel", "model-a")
 
-    # Demo 3 — Recommendation A/B: remove targeting so all users get popularity
-    d["flags"]["recommendationAlgorithm"].pop("targeting", None)
+    # Demo 3 — Recommendation A/B: all users on popularity (userTier still evaluated)
+    d["flags"]["recommendationAlgorithm"]["targeting"] = {
+        "if": [{"==": [{"var": "userTier"}, "premium"]}, "popularity", "popularity"]
+    }
     set_default(d, "recommendationAlgorithm", "popularity")
 
     # Chaos flags

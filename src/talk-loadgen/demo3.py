@@ -92,31 +92,34 @@ def main():
     print("  Dashboard: http://localhost:8080/grafana/d/feature-flag-recommendation?from=now-5m&to=now&refresh=5s")
     print("  Jaeger:    http://localhost:8080/jaeger/ui")
 
-    # ── Baseline ──────────────────────────────────────────────────────────────
-    step("0", "2", "Baseline — resetting flags, starting load")
+    # ── Baseline: all users on popularity ────────────────────────────────────
+    step("0", "2", "Baseline — all users on popularity")
     d = load()
     # Clear any canary state left over from demo1
     d["flags"]["productCatalogCanary"].pop("targeting", None)
     d["flags"]["productCatalogCanary"]["defaultVariant"] = "v1"
     set_default(d, "productCatalogV2Severity", "none")
-    # Remove targeting so ALL users get popularity — no premium routing yet
-    d["flags"]["recommendationAlgorithm"].pop("targeting", None)
+    # Targeting stays active (userTier is evaluated) but premium → popularity too
+    d["flags"]["recommendationAlgorithm"]["targeting"] = {
+        "if": [
+            {"==": [{"var": "userTier"}, "premium"]},
+            "popularity",
+            "popularity",
+        ]
+    }
     set_default(d, "recommendationAlgorithm", "popularity")
     save(d)
-    print("  ✓  recommendationAlgorithm targeting removed → all users on popularity")
+    print("  ✓  recommendationAlgorithm → popularity for all users (userTier still evaluated)")
     start_k6()
-    print()
-    print("  NOTE: if the dashboard still shows v2 traffic, it is historical")
-    print("  data from demo1. Wait ~30s for the [30s] rate window to flush.")
     wait_enter(
         "Baseline: all users on 'popularity'.\n"
         "  p95 low. Single variant in impressions chart. AOV table loading."
     )
 
-    # ── Step 1: Flip to personalized ─────────────────────────────────────────
-    step("1", "2", "Flip to personalized")
+    # ── Step 1: Flip — premium users get personalized ─────────────────────────
+    step("1", "2", "Flip — premium users get personalized")
     d = load()
-    # Restore targeting: premium → personalized, standard → 50/50 popularity/collaborative
+    # Premium → personalized, standard → 50/50 popularity/collaborative
     d["flags"]["recommendationAlgorithm"]["targeting"] = {
         "if": [
             {"==": [{"var": "userTier"}, "premium"]},
@@ -158,10 +161,12 @@ def main():
     answer = input("  Roll back to popularity? (y/N) ").strip().lower()
     if answer == "y":
         d = load()
-        d["flags"]["recommendationAlgorithm"].pop("targeting", None)
+        d["flags"]["recommendationAlgorithm"]["targeting"] = {
+            "if": [{"==": [{"var": "userTier"}, "premium"]}, "popularity", "popularity"]
+        }
         set_default(d, "recommendationAlgorithm", "popularity")
         save(d)
-        print("  ✓  Rolled back — targeting removed, all users on popularity.")
+        print("  ✓  Rolled back — all users on popularity.")
 
     print()
     print("  ✅  Demo 3 complete.")
