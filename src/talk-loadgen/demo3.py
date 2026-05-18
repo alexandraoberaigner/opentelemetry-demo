@@ -21,7 +21,7 @@ import signal
 import subprocess
 import sys
 import time
-import webbrowser
+
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent.parent
 FLAGD_JSON = REPO_ROOT / "src" / "flagd" / "demo.flagd.json"
@@ -88,11 +88,9 @@ def main():
     print("╔══════════════════════════════════════════════╗")
     print("║  Demo 3 — Recommendation A/B Test           ║")
     print("╚══════════════════════════════════════════════╝")
-    dashboard_url = "http://localhost:8080/grafana/d/feature-flag-recommendation?from=now-5m&to=now&refresh=5s"
     print()
-    print(f"  Dashboard: {dashboard_url}")
+    print("  Dashboard: http://localhost:8080/grafana/d/feature-flag-recommendation?from=now-5m&to=now&refresh=5s")
     print("  Jaeger:    http://localhost:8080/jaeger/ui")
-    webbrowser.open(dashboard_url)
 
     # ── Baseline ──────────────────────────────────────────────────────────────
     step("0", "2", "Baseline — resetting flags, starting load")

@@ -640,7 +640,7 @@
     "list": []
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-15m",
     "to": "now"
   },
   "refresh": "5s",
@@ -648,5 +648,5 @@
   "timezone": "",
   "title": "Feature Flag \u2014 Observability Dashboard",
   "uid": "feature-flag-recommendation",
-  "version": 2
+  "version": 1
 }
