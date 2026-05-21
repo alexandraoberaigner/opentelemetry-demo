@@ -171,11 +171,6 @@
       "defaultVariant": "popularity",
       "description": "Selects the algorithm used by the recommendation service. Demonstrates A/B testing tied to business outcomes via OpenFeature tracking.",
       "state": "ENABLED",
-      "variants": {
-        "collaborative": "collaborative",
-        "personalized": "personalized",
-        "popularity": "popularity"
-      },
       "targeting": {
         "if": [
           {
@@ -189,6 +184,11 @@
           "popularity",
           "popularity"
         ]
+      },
+      "variants": {
+        "collaborative": "collaborative",
+        "personalized": "personalized",
+        "popularity": "popularity"
       }
     },
     "recommendationCacheFailure": {
